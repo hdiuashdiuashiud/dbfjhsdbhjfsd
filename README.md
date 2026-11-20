@@ -1,4 +1,4 @@
-# Sklad velikostí – NAPA Dobříš
+# Sklad velikostí
 
 Každých 30 minut stáhne feed pro Zboží.cz z kvalitnirukavice.cz a zveřejní malý soubor
 `sklad.json` s velikostmi skladem u každého produktu. Používá ho stránka produktu
