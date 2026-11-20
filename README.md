@@ -1,6 +1,5 @@
 # Sklad velikostí
 
-Každých 30 minut stáhne feed pro Zboží.cz z kvalitnirukavice.cz a zveřejní malý soubor
 `sklad.json` s velikostmi skladem u každého produktu. Používá ho stránka produktu
 (barevná kolečka a tlačítka velikostí), aby nemusela načítat stránky ostatních barev.
 
