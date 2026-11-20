@@ -1,19 +1,20 @@
-name: Aktualizace
 
+name: Aktualizace
+ 
 on:
   schedule:
     - cron: '7,37 * * * *'   # každých 30 minut
   workflow_dispatch:          # tlačítko "Run workflow" pro ruční spuštění
-
+ 
 permissions:
   contents: read
   pages: write
   id-token: write
-
+ 
 concurrency:
   group: pages
   cancel-in-progress: true
-
+ 
 jobs:
   sklad:
     runs-on: ubuntu-latest
@@ -21,15 +22,17 @@ jobs:
       name: github-pages
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Vytvořit sklad.json z feedu
-        run: python sklad.py
+        id: sklad
+        run: python3 sklad.py
         env:
           FEED_URL: ${{ secrets.FEED_URL }}
       - uses: actions/configure-pages@v5
+        if: steps.sklad.outputs.ok == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.sklad.outputs.ok == 'true'
         with:
           path: public
       - uses: actions/deploy-pages@v4
+        if: steps.sklad.outputs.ok == 'true'
+ 
