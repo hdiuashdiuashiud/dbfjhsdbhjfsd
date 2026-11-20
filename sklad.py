@@ -25,8 +25,7 @@ def main():
         iid = iid.group(1).strip()
         grp = re.search(r'<ITEMGROUP_ID>(.*?)</ITEMGROUP_ID>', blok)
         if '-' not in iid:
-            if grp: produkty.add(grp.group(1).strip())
-            continue
+            continue   # hlavní položka produktu – rozhodují jen varianty
         pid = iid.split('-')[0]
         produkty.add(pid)
         dd = re.search(r'<DELIVERY_DATE>(.*?)</DELIVERY_DATE>', blok)
@@ -38,6 +37,11 @@ def main():
         sklad.setdefault(pid, set()).add(v)
     if len(produkty) < 500:
         sys.exit('Feed vypadá podezřele malý (%d produktů) – soubor nepřepisuji.' % len(produkty))
+    # produkty s variantami, které ve feedu vůbec nejsou = nic skladem
+    for k in velikosti:
+        pid = k.split('-')[0]
+        if pid not in produkty and pid not in nezname:
+            produkty.add(pid)
     out = {}
     for pid in produkty:
         if pid in nezname: continue
