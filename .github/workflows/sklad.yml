@@ -1,4 +1,4 @@
-name: Aktualizace skladu velikostí
+name: Aktualizace
 
 on:
   schedule:
@@ -26,6 +26,8 @@ jobs:
           python-version: '3.12'
       - name: Vytvořit sklad.json z feedu
         run: python sklad.py
+        env:
+          FEED_URL: ${{ secrets.FEED_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
