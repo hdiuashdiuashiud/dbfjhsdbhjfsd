@@ -1,4 +1,4 @@
-# Sklad velikostí
+# s
 
 `sklad.json` s velikostmi skladem u každého produktu. Používá ho stránka produktu
 (barevná kolečka a tlačítka velikostí), aby nemusela načítat stránky ostatních barev.
