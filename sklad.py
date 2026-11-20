@@ -1,15 +1,16 @@
-"""Stáhne feed pro Zboží.cz z e-shopu a vytvoří malý soubor se skladem velikostí.
+"""Stáhne feed (adresa v tajné proměnné FEED_URL) a vytvoří malý soubor se skladem velikostí.
 Výstup: public/sklad.json  ->  {"t": čas, "s": {"2743": "7,5|8|9|9,5", ...}}
 Produkt, u kterého neznáme velikost některé varianty, se vynechá (stránka si ji pak ověří sama)."""
 import json, os, re, sys, urllib.request, datetime
 
-FEED = os.environ.get('FEED_URL', 'https://www.kvalitnirukavice.cz/fotky9964/xml/zbozi_cz_new.xml')
+FEED = os.environ.get('FEED_URL', '')
 PORADI = ['6','6,5','7','7,5','8','8,5','9','9,5','10','10,5','11','11,5','12','13','XS','S','M','L','XL','XXL','90','95','100','105','110','115']
 
 def nacti_feed():
     if len(sys.argv) > 1:
         return open(sys.argv[1], encoding='utf-8').read()
-    req = urllib.request.Request(FEED, headers={'User-Agent': 'napa-sklad/1.0'})
+    if not FEED: sys.exit('Chybí tajná proměnná FEED_URL.')
+    req = urllib.request.Request(FEED, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=180) as r:
         return r.read().decode('utf-8')
 
@@ -44,7 +45,7 @@ def main():
     os.makedirs('public', exist_ok=True)
     data = {'t': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'), 's': out}
     json.dump(data, open('public/sklad.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
-    open('public/index.html', 'w', encoding='utf-8').write('<meta charset="utf-8">Sklad velikostí NAPA Dobříš – aktualizováno %s UTC, %d produktů.' % (data['t'], len(out)))
+    open('public/index.html', 'w', encoding='utf-8').write('<meta charset="utf-8">ok %s (%d)' % (data['t'], len(out)))
     print('produktů:', len(out), 'vynecháno (neznámá velikost):', len(nezname))
 
 main()
