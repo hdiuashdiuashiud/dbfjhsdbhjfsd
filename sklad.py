@@ -1,5 +1,6 @@
 """Stáhne feed (adresa v tajné proměnné FEED_URL) a vytvoří malý soubor se skladem velikostí.
-Výstup: public/sklad.json  ->  {"t": čas, "s": {"2743": "7,5|8|9|9,5", ...}}
+Výstup: public/sklad.json  ->  {"t": čas, "s": {"2743": "7,5|8|9|9,5", "2989": "*", ...}}
+("*" = produkt bez variant skladem, "" = není skladem)
 Produkt, u kterého neznáme velikost některé varianty, se vynechá (stránka si ji pak ověří sama)."""
 import json, os, re, sys, time, urllib.request, urllib.parse, datetime, socket
 
@@ -56,19 +57,21 @@ def main():
         print('VAROVÁNÍ:', e, '– na webu zůstává poslední úspěšná verze.')
         hotovo(False); return
     produkty, sklad, nezname = set(), {}, set()
+    hlavni = {}   # produkty bez variant: ITEM_ID bez pomlčky -> je skladem?
     for it in re.finditer(r'<SHOPITEM>(.*?)</SHOPITEM>', xml, re.S):
         blok = it.group(1)
         iid = re.search(r'<ITEM_ID>(.*?)</ITEM_ID>', blok)
         if not iid: continue
         iid = iid.group(1).strip()
         grp = re.search(r'<ITEMGROUP_ID>(.*?)</ITEMGROUP_ID>', blok)
-        if '-' not in iid:
-            continue   # hlavní položka produktu – rozhodují jen varianty
-        pid = iid.split('-')[0]
-        produkty.add(pid)
         dd = re.search(r'<DELIVERY_DATE>(.*?)</DELIVERY_DATE>', blok)
         try: dostupne = int(dd.group(1)) >= 0 if dd else True
         except ValueError: dostupne = True
+        if '-' not in iid:
+            hlavni[iid] = dostupne   # hlavní položka – použije se jen u produktů bez variant
+            continue
+        pid = iid.split('-')[0]
+        produkty.add(pid)
         if not dostupne: continue
         v = velikosti.get(iid)
         if v is None: nezname.add(pid); continue
@@ -85,6 +88,11 @@ def main():
     for pid in produkty:
         if pid in nezname: continue
         out[pid] = '|'.join(sorted(sklad.get(pid, ()), key=lambda x: PORADI.index(x) if x in PORADI else 99))
+    # produkty bez variant (velikost se píše do poznámky): "*" = skladem, "" = není skladem
+    s_variantami = produkty | {k.split('-')[0] for k in velikosti}
+    for pid, ok in hlavni.items():
+        if pid not in s_variantami:
+            out[pid] = '*' if ok else ''
     os.makedirs('public', exist_ok=True)
     data = {'t': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'), 's': out}
     json.dump(data, open('public/sklad.json', 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
