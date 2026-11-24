@@ -1,17 +1,35 @@
 """Stáhne feed (adresa v tajné proměnné FEED_URL) a vytvoří malý soubor se skladem velikostí.
 Výstup: public/sklad.json  ->  {"t": čas, "s": {"2743": "7,5|8|9|9,5", ...}}
 Produkt, u kterého neznáme velikost některé varianty, se vynechá (stránka si ji pak ověří sama)."""
-import json, os, re, sys, time, urllib.request, datetime
+import json, os, re, sys, time, urllib.request, urllib.parse, datetime, socket
 
 FEED = os.environ.get('FEED_URL', '')
 PORADI = ['6','6,5','7','7,5','8','8,5','9','9,5','10','10,5','11','11,5','12','13','XS','S','M','L','XL','XXL','90','95','100','105','110','115']
+
+_puvodni_gai = socket.getaddrinfo
+def jen_ipv4(zapnout):
+    """GitHub runnery občas nemají IPv6 – pak se připojujeme jen přes IPv4."""
+    if zapnout:
+        socket.getaddrinfo = lambda host, port, family=0, *a, **k: _puvodni_gai(host, port, socket.AF_INET, *a, **k)
+    else:
+        socket.getaddrinfo = _puvodni_gai
+
+def diagnostika():
+    try:
+        host = urllib.parse.urlparse(FEED).hostname
+        adr = sorted({x[4][0] for x in _puvodni_gai(host, 443)})
+        print('Adresy serveru:', ', '.join(adr), flush=True)
+    except Exception as e:
+        print('DNS se nepovedlo:', e, flush=True)
 
 def nacti_feed():
     if len(sys.argv) > 1:
         return open(sys.argv[1], encoding='utf-8').read()
     if not FEED: sys.exit('Chybí tajná proměnná FEED_URL.')
     posledni = None
-    for pokus in range(1, 4):                      # 3 pokusy, mezi nimi pauza
+    diagnostika()
+    for pokus in range(1, 4):
+        jen_ipv4(pokus >= 2)                       # 3 pokusy; 1. normálně, další jen přes IPv4
         try:
             req = urllib.request.Request(FEED, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=120) as r:
@@ -21,8 +39,8 @@ def nacti_feed():
             return data
         except Exception as e:
             posledni = e
-            print('Pokus %d se nepovedl: %s' % (pokus, e))
-            if pokus < 3: time.sleep(90)
+            print('Pokus %d se nepovedl: %s' % (pokus, e), flush=True)
+            if pokus < 3: time.sleep(30)
     raise RuntimeError('Feed se nepodařilo stáhnout: %s' % posledni)
 
 def hotovo(ok):
