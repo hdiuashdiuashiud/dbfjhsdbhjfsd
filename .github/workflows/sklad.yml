@@ -1,24 +1,25 @@
 name: Aktualizace
- 
+
 on:
   schedule:
     - cron: '7,37 * * * *'   # každých 30 minut
   workflow_dispatch:          # tlačítko "Run workflow" pro ruční spuštění
- 
+
 permissions:
   contents: read
   pages: write
   id-token: write
- 
+
 concurrency:
   group: pages
-  cancel-in-progress: true
- 
+  cancel-in-progress: false
+
 jobs:
-  sklad:
+  # 1) stáhne feed a připraví sklad.json
+  sestavit:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
+    outputs:
+      ok: ${{ steps.sklad.outputs.ok }}
     steps:
       - uses: actions/checkout@v5
       - name: Vytvořit sklad.json z feedu
@@ -32,6 +33,16 @@ jobs:
         if: steps.sklad.outputs.ok == 'true'
         with:
           path: public
-      - uses: actions/deploy-pages@v4
-        if: steps.sklad.outputs.ok == 'true'
- 
+
+  # 2) zveřejní ho na GitHub Pages (samostatný krok = oficiální postup GitHubu)
+  zverejnit:
+    needs: sestavit
+    if: needs.sestavit.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Zveřejnit
+        id: deploy
+        uses: actions/deploy-pages@v4
